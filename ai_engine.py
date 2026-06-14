@@ -22,10 +22,13 @@ Answer format:
 📌 Example sentence:
 ...
 """
-    # Model nomi gemini-1.5-flash qilib toʻgʻrilandi
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+    # Google v1beta API uchun eng toʻgʻri va barqaror URL manzili
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}]
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
     }
 
     try:
@@ -51,10 +54,13 @@ Explain difficult words.
 User message:
 {text}
 """
-    # Model nomi gemini-1.5-flash qilib toʻgʻrilandi
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}"
+    # Ikkala funksiyada ham URL bir xil boʻlishi shart
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}]
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
     }
 
     try:
