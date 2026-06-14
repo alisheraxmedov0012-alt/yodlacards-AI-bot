@@ -2,8 +2,8 @@ import os
 import aiohttp
 import logging
 
-# Railway oʻzgaruvchilaridan xavfsiz oʻqib olish
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# OpenRouter API kalitini xavfsiz oʻqib olish
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 WHISPER_AVAILABLE = False
 
@@ -22,24 +22,28 @@ Answer format:
 📌 Example sentence:
 ...
 """
-    # Google v1beta API uchun eng toʻgʻri va barqaror URL manzili
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
     
     payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }]
+        "model": "google/gemma-4-31b", # Google Gemma 4 bepul modeli
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
     }
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload) as response:
+            async with session.post(url, headers=headers, json=payload) as response:
                 data = await response.json()
                 if "error" in data:
-                    logging.error(f"Gemini API Error: {data['error']}")
-                    return "❌ AI server xatoligi yuz berdi."
+                    logging.error(f"OpenRouter Error: {data['error']}")
+                    return "❌ Sun'iy intellekt xatolik berdi."
                 
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                return data["choices"][0]["message"]["content"]
     except Exception as e:
         logging.error(f"Xatolik yuz berdi: {e}")
         return "❌ AI bilan bogʻlanishda xatolik yuz berdi."
@@ -54,24 +58,28 @@ Explain difficult words.
 User message:
 {text}
 """
-    # Ikkala funksiyada ham URL bir xil boʻlishi shart
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
     
     payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }]
+        "model": "google/gemma-4-31b", # Bu yerda ham o'sha bepul model
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
     }
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload) as response:
+            async with session.post(url, headers=headers, json=payload) as response:
                 data = await response.json()
                 if "error" in data:
-                    logging.error(f"Gemini API Error: {data['error']}")
-                    return "❌ AI server xatoligi yuz berdi."
+                    logging.error(f"OpenRouter Error: {data['error']}")
+                    return "❌ Sun'iy intellekt xatolik berdi."
                 
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                return data["choices"][0]["message"]["content"]
     except Exception as e:
         logging.error(f"Xatolik yuz berdi: {e}")
         return "❌ AI bilan bogʻlanishda xatolik yuz berdi."
