@@ -29,7 +29,7 @@ Answer format:
     }
     
     payload = {
-        "model": "google/gemma-4-31b-it:free", # To'liq va to'g'ri bepul model ID'si
+        "model": "nvidia/nemotron-3-ultra-550b-a55b:free", # To'g'rilangan aniq ID
         "messages": [
             {"role": "user", "content": prompt}
         ]
@@ -65,7 +65,7 @@ User message:
     }
     
     payload = {
-        "model": "google/gemma-4-31b-it:free", # Bu yerda ham aniq ID nomi
+        "model": "nvidia/nemotron-3-ultra-550b-a55b:free", # Bu yerda ham to'g'ri ID qo'yildi
         "messages": [
             {"role": "user", "content": prompt}
         ]
