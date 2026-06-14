@@ -3,7 +3,4 @@ aiosqlite
 gtts
 aiohttp
 python-dotenv
-openai-whisper
-ffmpeg-python
-pydub
 flask
