@@ -1,8 +1,9 @@
+import os
 import aiohttp
 import logging
 
-# Google AI Studio'dan nusxalab olingan TO'LIQ UZUN kalitni mana shu qo'shtirnoq ichiga qo'ying
-GEMINI_API_KEY = "AQ.Ab8RN6IfzxrT1hsjyvuts7aVTTPgAeR3E_hVbRFCqkk3HFDafg"
+# Railway oʻzgaruvchilaridan xavfsiz oʻqib olish
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 try:
     import whisper
@@ -28,14 +29,14 @@ Answer format:
 📌 Example sentence:
 ...
 """
-
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}]
     }
 
     try:
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        # Railway'da proxy (proxy=PROXY_URL) olib tashlandi
+        async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as response:
                 data = await response.json()
                 if "error" in data:
@@ -45,7 +46,7 @@ Answer format:
                 return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
         logging.error(f"Xatolik yuz berdi: {e}")
-        return "❌ AI bilan bog'lanishda xatolik yuz berdi."
+        return "❌ AI bilan bogʻlanishda xatolik yuz berdi."
 
 async def ai_teacher_response(text):
     prompt = f"""
@@ -57,14 +58,13 @@ Explain difficult words.
 User message:
 {text}
 """
-
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}]
     }
 
     try:
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as response:
                 data = await response.json()
                 if "error" in data:
@@ -74,7 +74,7 @@ User message:
                 return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
         logging.error(f"Xatolik yuz berdi: {e}")
-        return "❌ AI bilan bog'lanishda xatolik yuz berdi."
+        return "❌ AI bilan bogʻlanishda xatolik yuz berdi."
 
 async def speech_to_text(file_path):
     if not WHISPER_AVAILABLE or _whisper_model is None:
@@ -88,23 +88,19 @@ async def speech_to_text(file_path):
 
 async def analyze_voice_pronunciation(recognized_text):
     prompt = f"""You are an expert English pronunciation coach and phonetics teacher.
-
 The student just sent a voice message, and our Speech-to-Text system transcribed it as: "{recognized_text}"
 
 Analyze this result and reply to the student in BOTH English and Uzbek.
 1. If the text looks grammatically correct and correctly pronounced, praise them and give a short tip.
-2. If the transcribed text looks like a common mispronunciation (e.g., they wanted to say "Laptop" but it heard something else), correct it.
-
-Keep the response encouraging, structured, and easy to understand for an English learner.
+2. If the transcribed text looks like a common mispronunciation, keep the response encouraging, structured, and easy to understand for an English learner.
 """
-
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}]
     }
 
     try:
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as response:
                 data = await response.json()
                 if "error" in data:
@@ -114,4 +110,5 @@ Keep the response encouraging, structured, and easy to understand for an English
                 return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
         logging.error(f"Xatolik yuz berdi: {e}")
-        return "❌ AI bilan bog'lanishda xatolik yuz berdi."
+        return "❌ AI bilan bogʻlanishda xatolik yuz berdi."
+
