@@ -5,7 +5,6 @@ import logging
 # Railway oʻzgaruvchilaridan xavfsiz oʻqib olish
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Server RAM xotirasini asrash uchun Whisper yuklash qismi butunlay o'chirildi
 WHISPER_AVAILABLE = False
 
 async def generate_word_data(word):
@@ -23,7 +22,8 @@ Answer format:
 📌 Example sentence:
 ...
 """
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    # Model nomi gemini-1.5-flash qilib toʻgʻrilandi
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}]
     }
@@ -51,7 +51,8 @@ Explain difficult words.
 User message:
 {text}
 """
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    # Model nomi gemini-1.5-flash qilib toʻgʻrilandi
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}]
     }
@@ -70,7 +71,6 @@ User message:
         return "❌ AI bilan bogʻlanishda xatolik yuz berdi."
 
 async def speech_to_text(file_path):
-    # Ovozli xabarlar uchun yengil va xavfsiz qaytariq
     return None
 
 async def analyze_voice_pronunciation(recognized_text):
