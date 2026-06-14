@@ -29,7 +29,7 @@ Answer format:
     }
     
     payload = {
-        "model": "google/gemma-4-31b", # Google Gemma 4 bepul modeli
+        "model": "google/gemma-4-31b-it:free", # To'liq va to'g'ri bepul model ID'si
         "messages": [
             {"role": "user", "content": prompt}
         ]
@@ -65,7 +65,7 @@ User message:
     }
     
     payload = {
-        "model": "google/gemma-4-31b", # Bu yerda ham o'sha bepul model
+        "model": "google/gemma-4-31b-it:free", # Bu yerda ham aniq ID nomi
         "messages": [
             {"role": "user", "content": prompt}
         ]
