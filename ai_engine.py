@@ -5,14 +5,8 @@ import logging
 # Railway oʻzgaruvchilaridan xavfsiz oʻqib olish
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-try:
-    import whisper
-    _whisper_model = whisper.load_model("base")
-    WHISPER_AVAILABLE = True
-except Exception:
-    _whisper_model = None
-    WHISPER_AVAILABLE = False
-    logging.warning("Whisper/torch not available. Voice transcription will be disabled.")
+# Server RAM xotirasini asrash uchun Whisper yuklash qismi butunlay o'chirildi
+WHISPER_AVAILABLE = False
 
 async def generate_word_data(word):
     prompt = f"""
@@ -35,7 +29,6 @@ Answer format:
     }
 
     try:
-        # Railway'da proxy (proxy=PROXY_URL) olib tashlandi
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as response:
                 data = await response.json()
@@ -77,38 +70,9 @@ User message:
         return "❌ AI bilan bogʻlanishda xatolik yuz berdi."
 
 async def speech_to_text(file_path):
-    if not WHISPER_AVAILABLE or _whisper_model is None:
-        return None
-    try:
-        result = _whisper_model.transcribe(file_path)
-        return result["text"]
-    except Exception as e:
-        logging.error(f"Whisper transkripsiya xatosi: {e}")
-        return None
+    # Ovozli xabarlar uchun yengil va xavfsiz qaytariq
+    return None
 
 async def analyze_voice_pronunciation(recognized_text):
-    prompt = f"""You are an expert English pronunciation coach and phonetics teacher.
-The student just sent a voice message, and our Speech-to-Text system transcribed it as: "{recognized_text}"
-
-Analyze this result and reply to the student in BOTH English and Uzbek.
-1. If the text looks grammatically correct and correctly pronounced, praise them and give a short tip.
-2. If the transcribed text looks like a common mispronunciation, keep the response encouraging, structured, and easy to understand for an English learner.
-"""
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}]
-    }
-
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload) as response:
-                data = await response.json()
-                if "error" in data:
-                    logging.error(f"Gemini API Error: {data['error']}")
-                    return "❌ AI server xatoligi yuz berdi."
-                
-                return data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:
-        logging.error(f"Xatolik yuz berdi: {e}")
-        return "❌ AI bilan bogʻlanishda xatolik yuz berdi."
-
+    return "Ovozli funksiya hozircha faol emas."
+    
