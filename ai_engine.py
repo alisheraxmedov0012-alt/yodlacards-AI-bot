@@ -29,7 +29,7 @@ Answer format:
     }
     
     payload = {
-        "model": "nvidia/nemotron-3-nano-30b-a3b:free", # Ro'yxatdagi tezkor va bepul Nano model
+        "model": "google/gemma-4-31b-it:free", # Rasmda ko'ringan aniq va tezkor bepul ID
         "messages": [
             {"role": "user", "content": prompt}
         ]
@@ -65,7 +65,7 @@ User message:
     }
     
     payload = {
-        "model": "nvidia/nemotron-3-nano-30b-a3b:free", # Bu yerda ham o'sha model ID'si
+        "model": "google/gemma-4-31b-it:free", # Bu yerda ham o'sha model o'rnatildi
         "messages": [
             {"role": "user", "content": prompt}
         ]
