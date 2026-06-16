@@ -15,7 +15,7 @@ def main_menu():
     
     # 2. Mini App-ni ochadigan professional katta tugmani eng tepaga joylashtirdik
     # (Kelajakda buni o'zingizning real Vercel/Netlify havolangizga almashtirasiz)
-    mini_app_url = "https://yodlacards-app.netlify.app"
+    mini_app_url = "https://yodlacards-app.netlify.app?v=3"
     
     kb.row(
         types.KeyboardButton(
