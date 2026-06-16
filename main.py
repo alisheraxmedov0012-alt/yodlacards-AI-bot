@@ -2,53 +2,52 @@ import asyncio
 import logging
 import os
 import random
-
 from datetime import datetime
 
 import aiosqlite
-
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
-
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from gtts import gTTS
 
-from config import BOT_TOKEN, CHANNELS, ADMIN_ID
-
-from database import init_db, DB_NAME
-
+from ai_engine import ai_teacher_response, generate_word_data, speech_to_text
+from config import ADMIN_ID, BOT_TOKEN, CHANNELS
+from database import DB_NAME, init_db
+from keyboards import (
+    main_menu,
+    shop_keyboard,
+    sets_keyboard,
+    words_count_keyboard,
+)
 from states import BotStates
 
-from keyboards import main_menu, sets_keyboard, words_count_keyboard, shop_keyboard
+# --------------------------------------------------
+# FASTAPI SAHIFASI VA CORS SOZLAMALARI
+# --------------------------------------------------
+app = FastAPI(title="YodlaCards AI API", version="1.0.0")
 
-from ai_engine import generate_word_data, ai_teacher_response, speech_to_text
+# Mini App frontendidan so'rovlar kelganda bloklanmasligi uchun
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-from flask import Flask
-from threading import Thread
 
-app = Flask("")
-
-
-@app.route("/")
+@app.get("/")
 def home():
-    return "YodlaCards AI is alive!"
+    return {"status": "alive", "project": "YodlaCards AI"}
 
 
-def run():
-    app.run(host="0.0.0.0", port=5000)
-
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
-
-
-# ======================================================
+# --------------------------------------------------
 # LOGGING
-# ======================================================
-
+# --------------------------------------------------
 logging.basicConfig(level=logging.INFO)
 
 # ======================================================
@@ -1231,46 +1230,29 @@ async def broadcast(message: types.Message):
 
         await message.answer(f"✅ Yuborildi: {sent}")
 
-# 🚀 ASINXRON VEB SERVER VA BOTNI ISHGA TUSHIRISH QISMI
-import asyncio
-import logging
-from aiohttp import web
+# ==================================================
+# ASINXRON FASTAPI VA BOTNI PARALLEL ISHGA TUSHIRISH
+# ==================================================
 
-async def handle(request):
-    return web.Response(text="Bot tirik va ishlamoqda!")
-
-async def start_webhook_server():
-    app = web.Application()
-    app.router.add_get('/', handle)
-    # AGAR BROWSER YOKI ROBOT CHALKAŞSA, BARCHA YO'LLARGA SHU JAVOBNI BERISH:
-    app.router.add_get('/{tail:.*}', handle) 
-    runner = web.AppRunner(app)
-    await runner.setup()
-    
-    # Replit portni dinamik bersa uni oladi, bo'lmasa 8080 dan foydalanadi
-    import os
-    port = int(os.environ.get("PORT", 8080))
-    
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    print(f"🔥 Veb-server {port}-portda muvaffaqiyatli ishga tushdi!")
-
-async def main():
+@app.on_event("startup")
+async def on_startup():
     # 1. Ma'lumotlar bazasini ishga tushirish
     await init_db()
     
-    # 2. Veb-serverni orqa fonda (fon rejimida) yurgizib yuborish
-    asyncio.create_task(start_webhook_server())
+    # 2. Telegram botni orqa fonda (fon rejimida) yurgizib yuborish
+    asyncio.create_task(dp.start_polling(bot, drop_pending_updates=True))
     
-    print("✅ Bot muvaffaqiyatli ishga tushdi!")
-    
-    # 3. Botning o'zini polling rejimida boshlash
-    await dp.start_polling(bot, drop_pending_updates=True) 
+    print("🚀 FastAPI server muvaffaqiyatli yurdi!")
+    print("🤖 Bot polling rejimida boshlandi!")
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await bot.session.close()
 
 if __name__ == "__main__":
+    import uvicorn
+    # Render, Railway yoki Replit portni dinamik bersa uni oladi, bo'lmasa 8000 dan foydalanadi
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
     
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logging.info("Bot to'xtatildi")
         
