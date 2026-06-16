@@ -3,6 +3,8 @@ from aiogram.utils.keyboard import (
     ReplyKeyboardBuilder,
     InlineKeyboardBuilder
 )
+# 1. Telegram Mini App ochilishi uchun WebAppInfo klassini import qildik
+from aiogram.types import WebAppInfo
 
 # --------------------------------------------------
 # MAIN MENU
@@ -11,6 +13,18 @@ from aiogram.utils.keyboard import (
 def main_menu():
     kb = ReplyKeyboardBuilder()
     
+    # 2. Mini App-ni ochadigan professional katta tugmani eng tepaga joylashtirdik
+    # (Kelajakda buni o'zingizning real Vercel/Netlify havolangizga almashtirasiz)
+    mini_app_url = "https://yodlacards-app.netlify.app"
+    
+    kb.row(
+        types.KeyboardButton(
+            text="YodlaCards AI Ilovasi 🚀",
+            web_app=WebAppInfo(url=mini_app_url)
+        )
+    )
+    
+    # Quyida sizning barcha mavjud tugmalaringiz o'z holaticha qoldi
     kb.row(
         types.KeyboardButton(text="➕ So'z qo'shish"),
         types.KeyboardButton(text="📚 Lug'at")
@@ -18,7 +32,7 @@ def main_menu():
     
     kb.row(
         types.KeyboardButton(text="🎴 Flashkartalar"),
-        types.KeyboardButton(text="🧠 Kunlik Test")  # <-- Mana shu yangi qo'shildi
+        types.KeyboardButton(text="🧠 Kunlik Test")
     )
     
     kb.row(
