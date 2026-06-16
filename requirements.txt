@@ -4,3 +4,6 @@ gtts
 aiohttp
 python-dotenv
 flask
+fastapi>=0.100.0
+uvicorn>=0.22.0
+
