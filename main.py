@@ -44,6 +44,116 @@ app.add_middleware(
 def home():
     return {"status": "alive", "project": "YodlaCards AI"}
 
+# ==================================================================
+# TELEGRAM MINI APP UCHUN PROFESSIONAL API ENDPOINTS (YODLACARDS AI)
+# ==================================================================
+from pydantic import BaseModel
+from fastapi import HTTPException
+
+# Frontenddan keladigan ma'lumotlar strukturasi (Pydantic modellari)
+class ActionModel(BaseModel):
+    user_id: int
+    card_id: int
+    action: str  # 'know' yoki 'dont'
+
+class ChatModel(BaseModel):
+    text: str
+
+# 1. FOYDALANUVCHI KARTALARINI MINI APPGA YUKLAB BERISH
+@app.get("/api/user/{user_id}/cards")
+async def get_user_cards(user_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        # Foydalanuvchining lug'atidan o'rganayotgan so'zlarini tortamiz
+        async with db.execute(
+            "SELECT id, english, uzbek, ai_info FROM dictionary WHERE user_id = ? ORDER BY id DESC LIMIT 20",
+            (user_id,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            
+    # Agar foydalanuvchida hali so'z bo'lmasa, dastlabki namunaviy so'zlarni beramiz
+    if not rows:
+        return [
+            {"id": 0, "english": "Resilience", "uzbek": "Matonat", "ai_info": "The capacity to recover quickly from difficulties."},
+            {"id": 0, "english": "Ubiquitous", "uzbek": "Hamma yerda mavjud", "ai_info": "Present, appearing, or found everywhere."}
+        ]
+        
+    cards = []
+    for row in rows:
+        cards.append({
+            "id": row[0],
+            "english": row[1],
+            "uzbek": row[2],
+            "ai_info": row[3] if row[3] else "No extra info provided."
+        })
+    return cards
+
+# 2. BILDIM / BILMADIM TUGMALARI BOSILGANDA BAZANI YANGILASH VA XP QO'SHISH
+@app.post("/api/flashcard/action")
+async def flashcard_action(data: ActionModel):
+    async with aiosqlite.connect(DB_NAME) as db:
+        if data.action == "know":
+            # "Bildim" bosilsa: progress oshadi, tanga va XP beriladi
+            await db.execute(
+                "UPDATE dictionary SET correct_count = correct_count + 1, progress = MIN(progress + 20, 100) WHERE id = ?",
+                (data.card_id,)
+            )
+            await db.execute(
+                "UPDATE users SET xp = xp + 10, coins = coins + 2 WHERE user_id = ?",
+                (data.user_id,)
+            )
+        else:
+            # "Bilmadim" bosilsa: xatolar soni oshadi, progress kamayadi
+            await db.execute(
+                "UPDATE dictionary SET wrong_count = wrong_count + 1, progress = MAX(progress - 10, 0) WHERE id = ?",
+                (data.card_id,)
+            )
+        
+        # Level ko'tarilish mantiqini tekshirish (Foydalanuvchi joriy XP sini tekshiramiz)
+        async with db.execute("SELECT xp, level FROM users WHERE user_id = ?", (data.user_id,)) as cursor:
+            user_data = await cursor.fetchone()
+            if user_data:
+                current_xp, current_lvl = user_data
+                needed_xp = current_lvl * 100
+                if current_xp >= needed_xp:
+                    await db.execute(
+                        "UPDATE users SET level = level + 1, xp = xp - ? WHERE user_id = ?",
+                        (needed_xp, data.user_id)
+                    )
+                    
+        await db.commit()
+    return {"status": "success", "message": "Action processed successfully"}
+
+# 3. CHAT INTERFEYSIDAN AI TEACHER GA SO'ROV YUBORISH
+@app.post("/api/ai-teacher")
+async def ai_teacher_endpoint(data: ChatModel):
+    try:
+        # ai_engine.py ichidagi mavjud asinxron funksiyangizni chaqiramiz
+        response_text = await ai_teacher_response(data.text)
+        return {"response": response_text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 4. STATISTIKA TABI UCHUN FOYDALANUVCHI MA'LUMOTLARINI OLISH
+@app.get("/api/user/{user_id}/stats")
+async def get_user_stats(user_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        # Foydalanuvchi ma'lumotlarini o'qiymiz
+        async with db.execute(
+            "SELECT level, xp, coins, streak, total_words FROM users WHERE user_id = ?",
+            (user_id,)
+        ) as cursor:
+            user_row = await cursor.fetchone()
+            
+    if not user_row:
+        return {"level": 1, "xp": 0, "coins": 0, "streak": 0, "total_words": 0}
+        
+    return {
+        "level": user_row[0],
+        "xp": user_row[1],
+        "coins": user_row[2],
+        "streak": user_row[3],
+        "total_words": user_row[4]
+    }
 
 # --------------------------------------------------
 # LOGGING
