@@ -210,19 +210,19 @@ async def get_user_stats(user_id: int):
         ) as cursor:
             user_row = await cursor.fetchone()
             
-    if not user_row:
+        if not user_row:
         return {"level": 1, "xp": 0, "coins": 0, "streak": 0, "total_words": 0}
-        
-            total = user_row[4] if user_row[4] else 0
-        xp_now = user_row[1] % 100 if user_row[1] else 0 # progress bar foizini chiqarish uchun
-        
-        return {
-            "level": user_row[0],
-            "xp_percent": xp_now,
-            "streak": user_row[3],
-            "total_words": total,
-            "learned_words": int(total * 0.35) # Frontend xato bermasligi uchun yodlangan so'zlar
-        }
+
+    total = user_row[4] if user_row[4] else 0
+    xp_now = user_row[1] % 100 if user_row[1] else 0
+
+    return {
+        "level": user_row[0],
+        "xp_percent": xp_now,
+        "streak": user_row[3],
+        "total_words": total,
+        "learned_words": int(total * 0.35)
+    }
 
 # --------------------------------------------------
 # LOGGING
