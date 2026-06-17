@@ -10,7 +10,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
-from fastapi import FastAPI, UploadFile, Form
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from gtts import gTTS
 
@@ -129,27 +129,28 @@ async def get_user_cards(user_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
         # Foydalanuvchining lug'atidan o'rganayotgan so'zlarini tortamiz
         async with db.execute(
-            "SELECT id, english, uzbek, ai_info FROM dictionary WHERE user_id = ? ORDER BY id DESC LIMIT 20",
+            "SELECT id, english, uzbek, ai_info FROM dictionary WHERE user_id = ?",
             (user_id,)
         ) as cursor:
             rows = await cursor.fetchall()
             
-    # Agar foydalanuvchida hali so'z bo'lmasa, dastlabki namunaviy so'zlarni beramiz
-    if not rows:
-        return [
-            {"id": 0, "english": "Resilience", "uzbek": "Matonat", "ai_info": "The capacity to recover quickly from difficulties."},
-            {"id": 0, "english": "Ubiquitous", "uzbek": "Hamma yerda mavjud", "ai_info": "Present, appearing, or found everywhere."}
-        ]
-        
-    cards = []
-    for row in rows:
-        cards.append({
-            "id": row[0],
-            "english": row[1],
-            "uzbek": row[2],
-            "ai_info": row[3] if row[3] else "No extra info provided."
-        })
-    return cards
+        # Agar foydalanuvchida hali so'z bo'lmasa, namunaviy so'zlar qaytadi
+        if not rows:
+            return [
+                {"id": 0, "english": "Resilience", "uzbek": "Matonat", "ai_info": "The capacity to recover quickly."},
+                {"id": 0, "english": "Ubiquitous", "uzbek": "Hamma yerda mavjud", "ai_info": "Present, appearing, or found everywhere."}
+            ]
+            
+        cards = []
+        for row in rows:
+            cards.append({
+                "id": row[0],
+                "english": row[1],
+                "uzbek": row[2],
+                "ai_info": row[3] if row[3] else "No extra info provided."
+            })
+            
+        return cards
 
 # 2. BILDIM / BILMADIM TUGMALARI BOSILGANDA BAZANI YANGILASH VA XP QO'SHISH
 @app.post("/api/flashcard/action")
@@ -203,24 +204,28 @@ async def ai_teacher_endpoint(data: ChatModel):
 @app.get("/api/user/{user_id}/stats")
 async def get_user_stats(user_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
+        # Foydalanuvchi ma'lumotlarini o'qiymiz
         async with db.execute(
             "SELECT level, xp, coins, streak, total_words FROM users WHERE user_id = ?",
             (user_id,)
         ) as cursor:
-            user_row = await cursor.fetchone()
-
+            user_row = await cursor.fetchall()
+            
     if not user_row:
-        return {"level": 1, "xp_percent": 0, "streak": 0, "total_words": 0, "learned_words": 0}
-
-    total = user_row[4] if user_row[4] else 0
-    xp_now = user_row[1] % 100 if user_row[1] else 0
-
+        return {"level": 1, "xp_percent": 0, "coins": 0, "streak": 0, "total_words": 0, "learned_words": 0}
+        
+    user_data = user_row[0]  # fetchall ro'yxat qaytargani uchun birinchi elementni olamiz
+    
+    total = user_data[4] if user_data[4] else 0
+    xp_now = user_data[1] % 100 if user_data[1] else 0  # progress bar foizini chiqarish uchun
+    
     return {
-        "level": user_row[0],
+        "level": user_data[0],
         "xp_percent": xp_now,
-        "streak": user_row[3],
+        "coins": user_data[2],
+        "streak": user_data[3],
         "total_words": total,
-        "learned_words": int(total * 0.35)
+        "learned_words": int(total * 0.35)  # Frontend xato bermasligi uchun taxminiy yodlangan so'zlar
     }
 
 # --------------------------------------------------
@@ -229,8 +234,13 @@ async def get_user_stats(user_id: int):
 logging.basicConfig(level=logging.INFO)
 
 @app.post("/api/speech/verify")
-async def verify_speech(audio: UploadFile, user_id: int = Form(...), target_word: str = Form(...)):
+async def verify_speech(
+    audio: UploadFile = File(...),
+    user_id: int = Form(...),
+    target_word: str = Form(...)
+):
     try:
+        # Kelajakda bu yerga speech_test funksiyasini ulab qo'yasiz
         return {
             "score": 90,
             "feedback": f"Yaxshi talaffuz! '{target_word}' so'zini to'g'ri aytdingiz."
