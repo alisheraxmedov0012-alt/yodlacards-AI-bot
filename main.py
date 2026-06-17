@@ -44,6 +44,70 @@ app.add_middleware(
 def home():
     return {"status": "alive", "project": "YodlaCards AI"}
 
+# ====================== MINI APP API ENDPOINTS ======================
+
+from pydantic import BaseModel
+
+class AddWordModel(BaseModel):
+    set_name: str
+    english: str
+    uzbek: str
+
+# 1. So'z qo'shish
+@app.post("/api/user/{user_id}/add_word")
+async def add_word(user_id: int, data: AddWordModel):
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute(
+            """INSERT INTO dictionary 
+               (user_id, set_name, english, uzbek, ai_info, status, progress) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, data.set_name, data.english, data.uzbek, "", "new", 0)
+        )
+        await db.execute(
+            "UPDATE users SET xp = xp + 5, coins = coins + 1 WHERE user_id = ?", 
+            (user_id,)
+        )
+        await db.commit()
+    return {"status": "success", "message": "So'z muvaffaqiyatli qo'shildi"}
+
+
+# 2. Setlarni olish
+@app.get("/api/user/{user_id}/sets")
+async def get_user_sets(user_id: int):
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("""
+            SELECT set_name, COUNT(*) as count 
+            FROM dictionary 
+            WHERE user_id = ? 
+            GROUP BY set_name 
+            ORDER BY MAX(id) DESC
+        """, (user_id,)) as cursor:
+            rows = await cursor.fetchall()
+    return [{"set_name": row[0], "count": row[1]} for row in rows]
+
+
+# 3. Kartalarni olish
+@app.get("/api/user/{user_id}/cards")
+async def get_user_cards(user_id: int, set: str = None, limit: int = 50):
+    async with aiosqlite.connect(DB_NAME) as db:
+        if set:
+            query = """SELECT id, english, uzbek, ai_info 
+                       FROM dictionary 
+                       WHERE user_id = ? AND set_name = ? 
+                       ORDER BY RANDOM() LIMIT ?"""
+            params = (user_id, set, limit)
+        else:
+            query = """SELECT id, english, uzbek, ai_info 
+                       FROM dictionary 
+                       WHERE user_id = ? 
+                       ORDER BY RANDOM() LIMIT ?"""
+            params = (user_id, limit)
+        
+        async with db.execute(query, params) as cursor:
+            rows = await cursor.fetchall()
+    
+    return [{"id": r[0], "english": r[1], "uzbek": r[2], "ai_info": r[3] or ""} for r in rows]
+
 # ==================================================================
 # TELEGRAM MINI APP UCHUN PROFESSIONAL API ENDPOINTS (YODLACARDS AI)
 # ==================================================================
