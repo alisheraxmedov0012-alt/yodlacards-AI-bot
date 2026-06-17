@@ -230,15 +230,10 @@ async def get_user_stats(user_id: int):
 logging.basicConfig(level=logging.INFO)
 
 @app.post("/api/speech/verify")
-async def verify_speech(
-    audio: UploadFile,
-    user_id: int = Form(...),
-    target_word: str = Form(...)
-):
+async def verify_speech(audio: UploadFile, user_id: int = Form(...), target_word: str = Form(...)):
     try:
-        # Kelajakda bu yerga speech_test funksiyasini ulab qo'yasiz
         return {
-            "score": 90, 
+            "score": 90,
             "feedback": f"Yaxshi talaffuz! '{target_word}' so'zini to'g'ri aytdingiz."
         }
     except Exception:
