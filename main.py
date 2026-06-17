@@ -188,7 +188,7 @@ async def flashcard_action(data: ActionModel):
     return {"status": "success", "message": "Action processed successfully"}
 
 # 3. CHAT INTERFEYSIDAN AI TEACHER GA SO'ROV YUBORISH
-@app.post("/api/ai-teacher")
+@app.post("/api/ai/chat")
 async def ai_teacher_endpoint(data: ChatModel):
     try:
         # ai_engine.py ichidagi mavjud asinxron funksiyangizni chaqiramiz
