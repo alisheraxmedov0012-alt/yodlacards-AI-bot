@@ -203,15 +203,14 @@ async def ai_teacher_endpoint(data: ChatModel):
 @app.get("/api/user/{user_id}/stats")
 async def get_user_stats(user_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
-        # Foydalanuvchi ma'lumotlarini o'qiymiz
         async with db.execute(
             "SELECT level, xp, coins, streak, total_words FROM users WHERE user_id = ?",
             (user_id,)
         ) as cursor:
             user_row = await cursor.fetchone()
-            
-        if not user_row:
-        return {"level": 1, "xp": 0, "coins": 0, "streak": 0, "total_words": 0}
+
+    if not user_row:
+        return {"level": 1, "xp_percent": 0, "streak": 0, "total_words": 0, "learned_words": 0}
 
     total = user_row[4] if user_row[4] else 0
     xp_now = user_row[1] % 100 if user_row[1] else 0
