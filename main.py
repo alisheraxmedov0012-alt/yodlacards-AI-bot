@@ -49,26 +49,58 @@ def home():
 from pydantic import BaseModel
 
 class AddWordModel(BaseModel):
+    user_id: int
     set_name: str
     english: str
     uzbek: str
 
-# 1. So'z qo'shish
-@app.post("/api/user/{user_id}/add_word")
-async def add_word(user_id: int, data: AddWordModel):
-    async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute(
-            """INSERT INTO dictionary 
-               (user_id, set_name, english, uzbek, ai_info, status, progress) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (user_id, data.set_name, data.english, data.uzbek, "", "new", 0)
-        )
-        await db.execute(
-            "UPDATE users SET xp = xp + 5, coins = coins + 1 WHERE user_id = ?", 
-            (user_id,)
-        )
-        await db.commit()
-    return {"status": "success", "message": "So'z muvaffaqiyatli qo'shildi"}
+# Foydalanuvchining shaxsiy ID-si va to'plam nomi bo'yicha so'z qo'shish API
+@app.post("/api/flashcard/add")
+async def add_flashcard_api(data: AddWordModel):
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            # AI ta'rifini generatsiya qilish
+            try:
+                ai_info = await generate_word_data(data.english)
+            except Exception:
+                ai_info = f"'{data.english}' so'zining o'zbekcha tarjimasi: {data.uzbek}."
+
+            # MA'LUMOTLARNI FOYDALANUVCHI ID-SI BILAN BAZAGA YOZISH
+            await db.execute(
+                """
+                INSERT INTO flashcards (user_id, set_name, english, uzbek, ai_info, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (data.user_id, data.set_name, data.english, data.uzbek, ai_info, datetime.now().isoformat())
+            )
+            await db.commit()
+        return {"status": "success", "message": "So'z muvaffaqiyatli qo'shildi!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Har bir foydalanuvchining faqat o'ziga tegishli so'zlarni bazadan tortish API
+@app.get("/api/user/{user_id}/cards")
+async def get_user_cards_api(user_id: int):
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            async with db.execute(
+                "SELECT id, set_name, english, uzbek, ai_info FROM flashcards WHERE user_id = ?", 
+                (user_id,)
+            ) as cursor:
+                rows = await cursor.fetchall()
+                
+        cards = []
+        for row in rows:
+            cards.append({
+                "id": row[0],
+                "set_name": row[1],
+                "english": row[2],
+                "uzbek: row[3],
+                "ai_info": row[4]
+            })
+        return cards
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # 2. Setlarni olish
