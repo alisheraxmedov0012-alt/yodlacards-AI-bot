@@ -85,96 +85,54 @@ async def add_flashcard_api(data: AddWordModel):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# # Har bir foydalanuvchining faqat o'ziga tegishli shaxsiy setlarini yuklash API
-@app.get("/api/user/{user_id}/cards")
-async def get_user_cards_api(user_id: int):
+# 2. Foydalanuvchining shaxsiy setlari ro'yxatini va undagi so'zlar sonini olish API
+@app.get("/api/user/{user_id}/sets")
+async def get_user_sets(user_id: int):
     try:
         async with aiosqlite.connect(DB_NAME) as db:
             async with db.execute(
-                "SELECT id, set_name, english, uzbek, ai_info FROM dictionary WHERE user_id = ?", 
+                """
+                SELECT set_name, COUNT(*) as count 
+                FROM dictionary 
+                WHERE user_id = ? 
+                GROUP BY set_name 
+                ORDER BY MAX(id) DESC
+                """, 
                 (user_id,)
             ) as cursor:
                 rows = await cursor.fetchall()
-                
-        cards = []
-        for row in rows:
-            cards.append({
-                "id": row[0],
-                "set_name": row[1],
-                "english": row[2],
-                "uzbek": row[3],
-                "ai_info": row[4]
-            })
-        return cards
+        return [{"set_name": row[0], "count": row[1]} for row in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
 
-# 2. Setlarni olish
-@app.get("/api/user/{user_id}/sets")
-async def get_user_sets(user_id: int):
-    async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("""
-            SELECT set_name, COUNT(*) as count 
-            FROM dictionary 
-            WHERE user_id = ? 
-            GROUP BY set_name 
-            ORDER BY MAX(id) DESC
-        """, (user_id,)) as cursor:
-            rows = await cursor.fetchall()
-    return [{"set_name": row[0], "count": row[1]} for row in rows]
-
-
-# 3. Kartalarni olish
+# 3. UNIVERSAL API: Tanlangan set ichidagi shaxsiy kartalarni tortish
+# Agar foydalanuvchida so'z bo'lmasa, unga namuna so'zlar qaytariladi
 @app.get("/api/user/{user_id}/cards")
-async def get_user_cards(user_id: int, set: str = None, limit: int = 50):
-    async with aiosqlite.connect(DB_NAME) as db:
-        if set:
-            query = """SELECT id, english, uzbek, ai_info 
-                       FROM dictionary 
-                       WHERE user_id = ? AND set_name = ? 
-                       ORDER BY RANDOM() LIMIT ?"""
-            params = (user_id, set, limit)
-        else:
-            query = """SELECT id, english, uzbek, ai_info 
-                       FROM dictionary 
-                       WHERE user_id = ? 
-                       ORDER BY RANDOM() LIMIT ?"""
-            params = (user_id, limit)
-        
-        async with db.execute(query, params) as cursor:
-            rows = await cursor.fetchall()
-    
-    return [{"id": r[0], "english": r[1], "uzbek": r[2], "ai_info": r[3] or ""} for r in rows]
-
-# ==================================================================
-# TELEGRAM MINI APP UCHUN PROFESSIONAL API ENDPOINTS (YODLACARDS AI)
-# ==================================================================
-from pydantic import BaseModel
-from fastapi import HTTPException
-
-# Frontenddan keladigan ma'lumotlar strukturasi (Pydantic modellari)
-class ActionModel(BaseModel):
-    user_id: int
-    card_id: int
-    action: str  # 'know' yoki 'dont'
-
-class ChatModel(BaseModel):
-    text: str
-
-# 1. FOYDALANUVCHI KARTALARINI MINI APPGA YUKLAB BERISH
-@app.get("/api/user/{user_id}/cards")
-async def get_user_cards(user_id: int):
-    async with aiosqlite.connect(DB_NAME) as db:
-        # Foydalanuvchining lug'atidan o'rganayotgan so'zlarini tortamiz
-        async with db.execute(
-            "SELECT id, english, uzbek, ai_info FROM dictionary WHERE user_id = ?",
-            (user_id,)
-        ) as cursor:
-            rows = await cursor.fetchall()
-            
-        # Agar foydalanuvchida hali so'z bo'lmasa, namunaviy so'zlar qaytadi
-        if not rows:
+async def get_user_cards(user_id: int, set_name: str = None, limit: int = 50):
+    try:
+        async with aiosqlite.connect(DB_NAME) as db:
+            if set_name:
+                query = """
+                    SELECT id, english, uzbek, ai_info 
+                    FROM dictionary 
+                    WHERE user_id = ? AND set_name = ? 
+                    ORDER BY RANDOM() LIMIT ?
+                """
+                params = (user_id, set_name, limit)
+            else:
+                query = """
+                    SELECT id, english, uzbek, ai_info 
+                    FROM dictionary 
+                    WHERE user_id = ? 
+                    ORDER BY RANDOM() LIMIT ?
+                """
+                params = (user_id, limit)
+                
+            async with db.execute(query, params) as cursor:
+                rows = await cursor.fetchall()
+                
+        # Agar foydalanuvchida hali birorta ham so'z bo'lmasa, unga namuna so'zlar qaytariladi
+        if not rows and not set_name:
             return [
                 {"id": 0, "english": "Resilience", "uzbek": "Matonat", "ai_info": "The capacity to recover quickly."},
                 {"id": 0, "english": "Ubiquitous", "uzbek": "Hamma yerda mavjud", "ai_info": "Present, appearing, or found everywhere."}
@@ -188,8 +146,11 @@ async def get_user_cards(user_id: int):
                 "uzbek": row[2],
                 "ai_info": row[3] if row[3] else "No extra info provided."
             })
-            
         return cards
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+            
+    return cards
 
 # 2. BILDIM / BILMADIM TUGMALARI BOSILGANDA BAZANI YANGILASH VA XP QO'SHISH
 @app.post("/api/flashcard/action")
