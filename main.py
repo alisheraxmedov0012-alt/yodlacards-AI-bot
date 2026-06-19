@@ -95,7 +95,7 @@ async def get_user_cards_api(user_id: int):
                 "id": row[0],
                 "set_name": row[1],
                 "english": row[2],
-                "uzbek: row[3],
+                "uzbek": row[3],
                 "ai_info": row[4]
             })
         return cards
