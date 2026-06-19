@@ -47,7 +47,11 @@ def home():
 # ====================== MINI APP API ENDPOINTS ======================
 
 from pydantic import BaseModel
-
+class ActionModel(BaseModel):
+    user_id: int
+    card_id: int
+    action: str
+    
 class AddWordModel(BaseModel):
     user_id: int
     set_name: str
