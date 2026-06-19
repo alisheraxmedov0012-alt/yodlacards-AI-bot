@@ -54,7 +54,7 @@ class AddWordModel(BaseModel):
     english: str
     uzbek: str
 
-# Foydalanuvchining shaxsiy ID-si va to'plam nomi bo'yicha so'z qo'shish API
+# # Foydanuvchi o'z profiliga shaxsiy set va so'z qo'shishi uchun API
 @app.post("/api/flashcard/add")
 async def add_flashcard_api(data: AddWordModel):
     try:
@@ -65,26 +65,33 @@ async def add_flashcard_api(data: AddWordModel):
             except Exception:
                 ai_info = f"'{data.english}' so'zining o'zbekcha tarjimasi: {data.uzbek}."
 
-            # MA'LUMOTLARNI FOYDALANUVCHI ID-SI BILAN BAZAGA YOZISH
+            # MA'LUMOTLARNI ASLIY 'dictionary' JADVALIGA FOYDALANUVCHI ID-SI BILAN YOZISH
             await db.execute(
                 """
-                INSERT INTO flashcards (user_id, set_name, english, uzbek, ai_info, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO dictionary (user_id, set_name, english, uzbek, ai_info, status, progress)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (data.user_id, data.set_name, data.english, data.uzbek, ai_info, datetime.now().isoformat())
+                (data.user_id, data.set_name, data.english, data.uzbek, ai_info, "new", 0)
             )
+            
+            # Foydalanuvchiga so'z qo'shgani uchun XP va Tangalar berish
+            await db.execute(
+                "UPDATE users SET xp = xp + 5, coins = coins + 1 WHERE user_id = ?",
+                (data.user_id,)
+            )
+            
             await db.commit()
         return {"status": "success", "message": "So'z muvaffaqiyatli qo'shildi!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Har bir foydalanuvchining faqat o'ziga tegishli so'zlarni bazadan tortish API
+# # Har bir foydalanuvchining faqat o'ziga tegishli shaxsiy setlarini yuklash API
 @app.get("/api/user/{user_id}/cards")
 async def get_user_cards_api(user_id: int):
     try:
         async with aiosqlite.connect(DB_NAME) as db:
             async with db.execute(
-                "SELECT id, set_name, english, uzbek, ai_info FROM flashcards WHERE user_id = ?", 
+                "SELECT id, set_name, english, uzbek, ai_info FROM dictionary WHERE user_id = ?", 
                 (user_id,)
             ) as cursor:
                 rows = await cursor.fetchall()
@@ -101,7 +108,7 @@ async def get_user_cards_api(user_id: int):
         return cards
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+        
 
 # 2. Setlarni olish
 @app.get("/api/user/{user_id}/sets")
