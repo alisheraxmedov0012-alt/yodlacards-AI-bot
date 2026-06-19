@@ -92,7 +92,7 @@ async def add_flashcard_api(data: AddWordModel):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 2. Foydalanuvchining shaxsiy setlari ro'yxatini va undagi so'zlar sonini olish API
+# 2. Foydalanuvchining shaxsiylashtirilgan to'plamlarini olish API
 @app.get("/api/user/{user_id}/sets")
 async def get_user_sets(user_id: int):
     try:
@@ -112,15 +112,14 @@ async def get_user_sets(user_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 3. UNIVERSAL API: Tanlangan set ichidagi shaxsiy kartalarni tortish
-# Agar foydalanuvchida so'z bo'lmasa, unga namuna so'zlar qaytariladi
+# 3. UNIVERSAL API: Tanlangan to'plam ichidagi kartalarni olish
 @app.get("/api/user/{user_id}/cards")
 async def get_user_cards(user_id: int, set_name: str = None, limit: int = 50):
     try:
         async with aiosqlite.connect(DB_NAME) as db:
             if set_name:
                 query = """
-                    SELECT id, english, uzbek, ai_info 
+                    SELECT id, set_name, english, uzbek, ai_info 
                     FROM dictionary 
                     WHERE user_id = ? AND set_name = ? 
                     ORDER BY RANDOM() LIMIT ?
@@ -128,7 +127,7 @@ async def get_user_cards(user_id: int, set_name: str = None, limit: int = 50):
                 params = (user_id, set_name, limit)
             else:
                 query = """
-                    SELECT id, english, uzbek, ai_info 
+                    SELECT id, set_name, english, uzbek, ai_info 
                     FROM dictionary 
                     WHERE user_id = ? 
                     ORDER BY RANDOM() LIMIT ?
@@ -138,26 +137,24 @@ async def get_user_cards(user_id: int, set_name: str = None, limit: int = 50):
             async with db.execute(query, params) as cursor:
                 rows = await cursor.fetchall()
                 
-        # Agar foydalanuvchida hali birorta ham so'z bo'lmasa, unga namuna so'zlar qaytariladi
         if not rows and not set_name:
             return [
-                {"id": 0, "english": "Resilience", "uzbek": "Matonat", "ai_info": "The capacity to recover quickly."},
-                {"id": 0, "english": "Ubiquitous", "uzbek": "Hamma yerda mavjud", "ai_info": "Present, appearing, or found everywhere."}
+                {"id": 0, "set_name": "Default", "english": "Resilience", "uzbek": "Matonat", "ai_info": "The capacity to recover quickly."},
+                {"id": 0, "set_name": "Default", "english": "Ubiquitous", "uzbek": "Hamma yerda mavjud", "ai_info": "Present, appearing, or found everywhere."}
             ]
             
         cards = []
         for row in rows:
             cards.append({
                 "id": row[0],
-                "english": row[1],
-                "uzbek": row[2],
-                "ai_info": row[3] if row[3] else "No extra info provided."
+                "set_name": row[1],
+                "english": row[2],
+                "uzbek": row[3],
+                "ai_info": row[4] if row[4] else "No extra info provided."
             })
         return cards
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-            
-    return cards
 
 # 2. BILDIM / BILMADIM TUGMALARI BOSILGANDA BAZANI YANGILASH VA XP QO'SHISH
 @app.post("/api/flashcard/action")
