@@ -51,6 +51,9 @@ class ActionModel(BaseModel):
     user_id: int
     card_id: int
     action: str
+
+class ChatModel(BaseModel):
+    text: str
     
 class AddWordModel(BaseModel):
     user_id: int
